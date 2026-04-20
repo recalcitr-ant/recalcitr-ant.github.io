@@ -134,6 +134,9 @@ body {
     font-size: 0.8rem;
     transition: color 0.15s, background 0.15s;
     line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 #sidebar nav ul li a:hover {
     color: var(--accent);
@@ -502,7 +505,7 @@ body.compact .node[data-terminal="1"]:not([data-haslabels="1"]) > .choices { dis
     <p class="sidebar-credit">made by recal</p>
     <input type="text" id="search" placeholder="Search encounters..." autocomplete="off">
     <select id="version-filter">
-      <option value="all">(default)</option>
+      <option value="all">Show all encounters</option>
       <option value="124">Show 1.2.4 encounters</option>
       <option value="126">Show 1.2.6 encounters</option>
     </select>
@@ -43043,6 +43046,7 @@ Maximum modules reached. Select an existing module to replace with the new modul
 </div>
 
 <script>
+// Live search — searches encounter names AND all dialogue text (including nested nodes)
 const searchInput = document.getElementById('search');
 const versionFilter = document.getElementById('version-filter');
 const encList = document.getElementById('enc-list');
@@ -43063,16 +43067,19 @@ function applyFilters() {
         const isNotInEncList = li.classList.contains('not-in-enc-list');
         const isUnreachable = li.classList.contains('unreachable');
         const visibleByClass = (!isOrphan || showOrphans) && (!isNotInEncList || showNotInEncList) && (!isUnreachable || showUnreachable);
+        // Version filter: 'all' shows everything; otherwise only show items with matching data-version
         const itemVersion = li.dataset.version || '';
         const matchesVersion = ver === 'all' || itemVersion === ver;
         li.classList.toggle('hidden', !matchesSearch || !visibleByClass || !matchesVersion);
     });
+    // Also show/hide encounter sections to match the sidebar filter
     sections.forEach(sec => {
         const secVersion = sec.dataset.version || '';
         const matchesVersion = ver === 'all' || secVersion === ver;
         if (!matchesVersion) {
             sec.style.display = 'none';
         } else {
+            // Restore display — CSS visibility rules (orphan/not-in-enc-list/etc.) still apply
             sec.style.display = '';
         }
     });
@@ -43081,39 +43088,46 @@ function applyFilters() {
 versionFilter.addEventListener('change', applyFilters);
 
 searchInput.addEventListener('input', function() {
+    // Passphrase detection — reveal secret toggles
     const secretToggles = document.getElementById('secret-toggles');
     if (searchInput.value === 'showmeeverything') {
         secretToggles.classList.add('visible');
         searchInput.value = '';
         syncControlsHeight();
     } else {
+        // Don't hide them once revealed — user may want to keep them on
     }
     applyFilters();
 });
 
+// Compact toggle
 const compactToggle = document.getElementById('compact-toggle');
 compactToggle.addEventListener('change', function() {
     document.body.classList.toggle('compact', this.checked);
 });
 
+// Orphan toggle
 const orphanToggle = document.getElementById('orphan-toggle');
 orphanToggle.addEventListener('change', function() {
     document.body.classList.toggle('show-orphans', this.checked);
     applyFilters();
 });
 
+// Not-in-enc-list toggle
 const notInEncListToggle = document.getElementById('not-in-enc-list-toggle');
 notInEncListToggle.addEventListener('change', function() {
     document.body.classList.toggle('show-not-in-enc-list', this.checked);
     applyFilters();
 });
 
+// Unreachable toggle
 const unreachableToggle = document.getElementById('unreachable-toggle');
 unreachableToggle.addEventListener('change', function() {
     document.body.classList.toggle('show-unreachable', this.checked);
     applyFilters();
 });
 
+// Keep sidebar bottom gap in sync with controls panel height
 function syncControlsHeight() {
     const panel = document.getElementById('controls-panel');
     if (panel) {
@@ -43123,6 +43137,7 @@ function syncControlsHeight() {
 syncControlsHeight();
 window.addEventListener('resize', syncControlsHeight);
 
+// Highlight target node on hash change
 function highlightTarget() {
     document.querySelectorAll('.node.targeted').forEach(n => n.classList.remove('targeted'));
     const hash = window.location.hash;
